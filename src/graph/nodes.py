@@ -33,6 +33,12 @@ from src.llm.prompts import (
     REWRITE_PROMPT,
 )
 from src.rag.retriever import CollegeRetriever, get_retriever
+from src.rag.syllabus import (
+    format_semester_table,
+    parse_semester_subjects,
+    referenced_semesters,
+    resolve_single_semester,
+)
 from src.tools.calculator import calculate
 from src.utils.helpers import clean_llm_text, history_to_text, recent_user_turns, trim_history
 
@@ -43,10 +49,27 @@ PLAN_CREATE = "PLAN_CREATE"
 PLAN_MODIFY = "PLAN_MODIFY"
 
 # Cheap pre-routing so obvious commands skip an LLM round-trip.
+# "study table" and "timetable" are included because students ask for a study
+# schedule using those words; leaving them out sent "make a study table for 4th
+# semester" to the academic branch, which could only refuse it.
 _PLAN_HINTS = re.compile(
-    r"\b(?:study plan|study schedule|revision plan|revision schedule|"
-    r"(?:make|create|build|give me|generate)\s+(?:me\s+)?a\s+plan|"
+    r"\b(?:study\s+(?:plan|table|schedule|timetable)|"
+    r"revision\s+(?:plan|table|schedule|timetable)|"
+    r"(?:make|create|build|give me|generate|prepare|draw)\s+"
+    r"(?:me\s+)?(?:a\s+|an\s+)?"
+    r"(?:study\s+|revision\s+|exam\s+|subject\s+)*"
+    r"(?:plan|table|schedule|timetable|roster)|"
+    r"(?:timetable|time table)\s+for\s+(?:my|our|the)\b|"
     r"prepare for (?:my )?exams?|plan my studies|schedule my studies)\b",
+    re.I,
+)
+# Words that state an intention to study something. "I have 15 days to study my
+# semester subjects" names no subject, so without this it is left with a single
+# constraint and gets treated as an ordinary knowledge-base question.
+_PLAN_INTENT = re.compile(
+    r"\b(?:study|studying|revise|revising|prepare|preparing|practi[cs]e|"
+    r"learn|learning|cover|covering)\b[\s\S]{0,30}?\b(?:subjects?|"
+    r"syllabus|curriculum|courses?|semester|sem)\b",
     re.I,
 )
 _MODIFY_HINTS = re.compile(
@@ -93,7 +116,14 @@ def route_intent(state: AssistantState) -> dict:
     )
     academic_signal = bool(_ACADEMIC_QUESTION_HINTS.search(question))
 
-    if constraint_hits >= 2 and not academic_signal:
+    # "I have 15 days to study my semester subjects" names no subject, so only
+    # the day count parses. A study intention plus any one constraint is still
+    # a planning request, otherwise it falls through to RAG and is refused.
+    planning_signal = bool(_PLAN_INTENT.search(question))
+    if (
+        (constraint_hits >= 2 or (planning_signal and constraint_hits >= 1))
+        and not academic_signal
+    ):
         return {"intent": PLAN_MODIFY if has_plan else PLAN_CREATE}
 
     # Any remaining planning signal, such as an explicit "create a plan", with no
@@ -161,6 +191,9 @@ def retrieve(state: AssistantState) -> dict:
     try:
         retriever: CollegeRetriever = get_retriever()
         hits = retriever.retrieve(query)
+        # Retrieval sees chunks, but a page is the unit a reader reasons over.
+        # Restoring whole pages keeps tables such as the semester list intact.
+        hits = retriever.complete_hits(hits, retriever.store)
     except Exception as exc:
         logger.error("Retrieval failed: %s", exc)
         return {
@@ -176,12 +209,76 @@ def retrieve(state: AssistantState) -> dict:
     return {
         "retrieved_docs": hits,
         "context": retriever.format_context(hits),
-        "sources": retriever.format_sources(hits),
+        # Cite what the question is about, not everything that scored well.
+        "sources": retriever.format_sources(hits, query),
         "grounded": bool(hits),
     }
 
 
 # --- Answering -------------------------------------------------------------
+# A question that asks what the syllabus lists is answered from the parsed
+# table rather than from the model. At this size the model dropped most of the
+# semesters and attached the wrong names to the wrong ones, which is worse than
+# an incomplete answer.
+_SYLLABUS_LIST_QUESTION = re.compile(
+    r"\b(?:subjects?|courses?|syllabus|curriculum|curriculum items?)\b"
+    r"[\s\S]{0,40}?\b(?:list|listed|which|what|are|is|contain|includes?|"
+    r"in the|of the|for the)\b"
+    r"|\b(?:what|which)\b[\s\S]{0,60}?\b(?:subjects?|courses?|syllabus|"
+    r"curriculum|curriculum items?)\b",
+    re.I,
+)
+
+
+def _syllabus_answer(state: AssistantState) -> dict | None:
+    """Answer a syllabus-subject question from the parsed semester table.
+
+    Returns None when the question is not one this handles, so the normal
+    grounded RAG path runs instead.
+    """
+    question = state.get("question", "")
+    if not _SYLLABUS_LIST_QUESTION.search(question):
+        return None
+
+    hits = state.get("retrieved_docs", [])
+    semesters = parse_semester_subjects(
+        "\n".join(doc.page_content for doc, _ in hits)
+    )
+    if not semesters:
+        # The syllabus is not in the retrieved context, so there is nothing to
+        # read the table from. Say so rather than answering from memory.
+        return None
+
+    wanted = referenced_semesters(question)
+    if wanted:
+        covered = {n: s for n, s in semesters.items() if n in wanted}
+        if not covered:
+            # The table is present but has no such semester. Say that plainly
+            # instead of inventing subjects for it.
+            names = ", ".join(f"Semester {n}" for n in sorted(semesters))
+            answer = (
+                f"The syllabus document lists subjects for {names}, "
+                "but it does not give the subject names for the semester you "
+                "asked about. Please tell me the subjects and I can help with them."
+            )
+            return {
+                "answer": _append_citations(answer, state.get("sources", [])),
+                "grounded": True,
+            }
+        table = format_semester_table(covered)
+    else:
+        table = format_semester_table(semesters)
+
+    header = (
+        "The CSE syllabus lists these subjects by semester, exactly as the "
+        "document names them:"
+    )
+    return {
+        "answer": _append_citations(f"{header}\n\n{table}", state.get("sources", [])),
+        "grounded": True,
+    }
+
+
 def generate_answer(state: AssistantState) -> dict:
     """Answer strictly from the retrieved context, citing real page metadata."""
     if state.get("error"):
@@ -192,6 +289,10 @@ def generate_answer(state: AssistantState) -> dict:
         # Refuse without calling the LLM: with no evidence there is nothing to
         # ground an answer in, and a model asked to answer anyway will improvise.
         return {"answer": NO_CONTEXT_ANSWER, "grounded": False, "sources": []}
+
+    syllabus = _syllabus_answer(state)
+    if syllabus is not None:
+        return syllabus
 
     history = trim_history(state.get("history", []))
     try:
@@ -252,6 +353,48 @@ def calculator_node(state: AssistantState) -> dict:
 
 
 # --- Study planning --------------------------------------------------------
+# "my 4th semester subjects" names no subject, only a semester. The syllabus is
+# the one place the actual names live, so it is consulted before the student is
+# asked for a list they are not expected to type out.
+_SEMESTER_SUBJECT_REQUEST = re.compile(
+    r"\bsemester\b|\bsem\b", re.I
+)
+
+
+def _syllabus_semesters(state: AssistantState) -> dict[int, list[str]]:
+    """The semester table, read from retrieved text or fetched on demand.
+
+    The planning branch does not go through retrieval, so a study-plan request
+    that names a semester has nothing to read the subject list from until the
+    syllabus is looked up here.
+
+    Only the syllabus document is asked for it. Searching with the student's
+    own words instead ranks the academic calendar first, because "semester"
+    appears all over it, and that document has no subject list at all.
+    """
+    text = "\n".join(doc.page_content for doc, _ in state.get("retrieved_docs", []))
+    semesters = parse_semester_subjects(text)
+    if semesters:
+        return semesters
+
+    try:
+        retriever = get_retriever()
+        # The document terms are stemmed, so "Syllabus" arrives as "syllabu";
+        # match against the file name directly rather than the stemmed set.
+        syllabus_docs = [
+            doc
+            for doc in retriever.store.docstore._dict.values()
+            if "syllabus" in (doc.metadata.get("source", "") or "").lower()
+        ]
+        if not syllabus_docs:
+            return {}
+        hits = retriever.complete_hits([(doc, 1.0) for doc in syllabus_docs], retriever.store)
+    except Exception as exc:
+        logger.warning("Syllabus lookup for planning failed: %s", exc)
+        return {}
+    return parse_semester_subjects("\n".join(doc.page_content for doc, _ in hits))
+
+
 def collect_plan_info(state: AssistantState) -> dict:
     """Merge inputs parsed from this message with anything already known."""
     parsed = parse_plan_request(state.get("question", ""))
@@ -262,6 +405,21 @@ def collect_plan_info(state: AssistantState) -> dict:
     for key in ("subjects", "days_until_exam", "hours_per_day", "session_minutes"):
         if parsed.get(key):
             merged[key] = parsed[key]
+
+    # "my 4th semester subjects" names a semester, not a subject. The syllabus
+    # holds the actual names, so read them from there before asking the student
+    # to type a list they are not expected to have to hand.
+    question = state.get("question", "")
+    if (
+        not merged.get("subjects")
+        and _SEMESTER_SUBJECT_REQUEST.search(question)
+    ):
+        from_syllabus = resolve_single_semester(
+            question, _syllabus_semesters(state)
+        )
+        if from_syllabus:
+            merged["subjects"] = from_syllabus
+
     if parsed.get("unavailable_days"):
         merged["unavailable_days"] = sorted(
             set(existing.get("unavailable_days", [])) | set(parsed["unavailable_days"])

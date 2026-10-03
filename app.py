@@ -36,44 +36,55 @@ def inject_styles() -> None:
         """
         <style>
         /* ---- Design Tokens ---- */
+        /* Warm terracotta / saffron palette on cream and espresso. */
         :root {
-            --brand-50:  #eff6ff;
-            --brand-100: #dbeafe;
-            --brand-200: #bfdbfe;
-            --brand-300: #93c5fd;
-            --brand-400: #60a5fa;
-            --brand-500: #3b82f6;
-            --brand-600: #2563eb;
-            --brand-700: #1d4ed8;
-            --brand-800: #1e40af;
-            --brand-900: #1e3a8a;
+            /* Terracotta primary, lightest to darkest. */
+            --brand-50:  #FDF4EE;
+            --brand-100: #F9E7DA;
+            --brand-200: #F0CDB7;
+            --brand-300: #E29A72;
+            --brand-400: #D9773F;
+            --brand-500: #C65D3A;
+            --brand-600: #A9472A;
+            --brand-700: #8B3A22;
+            --brand-800: #6E2D1B;
+            --brand-900: #552315;
 
-            --surface:       #ffffff;
-            --surface-alt:   #f8fafc;
-            --surface-sunk:  #f1f5f9;
-            --surface-card:  #ffffff;
+            /* Saffron accent. */
+            --accent-300: #EFC77E;
+            --accent-400: #E2AA52;
+            --accent-500: #D99A3D;
+            --accent-600: #BC7F2A;
 
-            --ink:           #0f172a;
-            --ink-muted:     #475569;
-            --ink-faint:     #94a3b8;
+            --surface:       #FFF8EF;
+            --surface-alt:   #F4E5D3;
+            --surface-sunk:  #F7EDE1;
+            --surface-card:  #FFFCF7;
 
-            --line:          #e2e8f0;
-            --line-strong:   #cbd5e1;
+            /* Text placed on a filled terracotta surface. */
+            --on-primary:    #FFF6EC;
 
-            --success:       #10b981;
-            --warning:       #f59e0b;
-            --danger:        #ef4444;
+            --ink:           #2B211B;
+            --ink-muted:     #6F6259;
+            --ink-faint:     #9A8A7D;
+
+            --line:          #E6D3BE;
+            --line-strong:   #D3B79B;
+
+            --success:       #7A8B4F;
+            --warning:       #D99A3D;
+            --danger:        #B4462F;
 
             --radius-sm: 8px;
             --radius-md: 12px;
             --radius-lg: 16px;
             --radius-xl: 20px;
 
-            --shadow-xs: 0 1px 2px rgba(15, 23, 42, 0.04);
-            --shadow-sm: 0 1px 3px rgba(15, 23, 42, 0.06), 0 1px 2px rgba(15, 23, 42, 0.04);
-            --shadow-md: 0 4px 12px rgba(15, 23, 42, 0.07), 0 2px 4px rgba(15, 23, 42, 0.04);
-            --shadow-lg: 0 12px 32px rgba(15, 23, 42, 0.10), 0 4px 8px rgba(15, 23, 42, 0.05);
-            --shadow-focus: 0 0 0 4px rgba(37, 99, 235, 0.12);
+            --shadow-xs: 0 1px 2px rgba(43, 33, 27, 0.05);
+            --shadow-sm: 0 1px 3px rgba(43, 33, 27, 0.07), 0 1px 2px rgba(43, 33, 27, 0.05);
+            --shadow-md: 0 4px 12px rgba(43, 33, 27, 0.09), 0 2px 4px rgba(43, 33, 27, 0.05);
+            --shadow-lg: 0 12px 32px rgba(43, 33, 27, 0.12), 0 4px 8px rgba(43, 33, 27, 0.06);
+            --shadow-focus: 0 0 0 4px rgba(198, 93, 58, 0.16);
 
             --transition-fast: 120ms cubic-bezier(0.4, 0, 0.2, 1);
             --transition-base: 200ms cubic-bezier(0.4, 0, 0.2, 1);
@@ -81,23 +92,45 @@ def inject_styles() -> None:
 
         @media (prefers-color-scheme: dark) {
             :root {
-                --surface:       #0b1220;
-                --surface-alt:   #111a2e;
-                --surface-sunk:  #0f172a;
-                --surface-card:  #1e293b;
+                --brand-50:  #3A2820;
+                --brand-100: #463025;
+                --brand-200: #5C3E2E;
+                --brand-300: #A05437;
+                --brand-400: #C86A44;
+                --brand-500: #E27650;
+                --brand-600: #E27650;
+                --brand-700: #EC8A68;
+                --brand-800: #F0A184;
+                --brand-900: #F3B79E;
 
-                --ink:           #f1f5f9;
-                --ink-muted:     #94a3b8;
-                --ink-faint:     #64748b;
+                --accent-300: #EFC77E;
+                --accent-400: #E2AA52;
+                --accent-500: #E2AA52;
+                --accent-600: #D99A3D;
 
-                --line:          #1e293b;
-                --line-strong:   #334155;
+                --surface:       #1E1713;
+                --surface-alt:   #2A211C;
+                --surface-sunk:  #241C17;
+                --surface-card:  #30251F;
 
-                --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.3);
-                --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.35), 0 1px 2px rgba(0, 0, 0, 0.25);
-                --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4), 0 2px 4px rgba(0, 0, 0, 0.25);
-                --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.5), 0 4px 8px rgba(0, 0, 0, 0.3);
-                --shadow-focus: 0 0 0 4px rgba(59, 130, 246, 0.2);
+                --on-primary:    #2A1A12;
+
+                --ink:           #FFF4E6;
+                --ink-muted:     #CDBBAA;
+                --ink-faint:     #9C8776;
+
+                --line:          #493A31;
+                --line-strong:   #63503F;
+
+                --success:       #A3B472;
+                --warning:       #E2AA52;
+                --danger:        #E27650;
+
+                --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.35);
+                --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.4), 0 1px 2px rgba(0, 0, 0, 0.3);
+                --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.45), 0 2px 4px rgba(0, 0, 0, 0.3);
+                --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.55), 0 4px 8px rgba(0, 0, 0, 0.35);
+                --shadow-focus: 0 0 0 4px rgba(226, 118, 80, 0.22);
             }
         }
 
@@ -116,8 +149,8 @@ def inject_styles() -> None:
             background-color: var(--surface);
             color: var(--ink);
             background-image:
-                radial-gradient(ellipse 80% 50% at 50% -20%, rgba(37, 99, 235, 0.04), transparent),
-                radial-gradient(ellipse 60% 40% at 80% 110%, rgba(37, 99, 235, 0.03), transparent);
+                radial-gradient(ellipse 80% 50% at 50% -20%, rgba(198, 93, 58, 0.07), transparent),
+                radial-gradient(ellipse 60% 40% at 80% 110%, rgba(217, 154, 61, 0.06), transparent);
             background-attachment: fixed;
         }
 
@@ -128,7 +161,16 @@ def inject_styles() -> None:
             margin: 0 auto;
         }
 
-        #MainMenu, footer, header { visibility: hidden; }
+        /* Hide Streamlit's own menu and footer, but keep the sidebar expand control
+           usable: Streamlit renders it inside the header, so hiding the header
+           outright leaves no way to reopen a collapsed sidebar. The toolbar is
+           hidden on its own instead, and the expand control is restored within
+           it, which keeps the Deploy/Menu buttons out of the way. */
+        #MainMenu, footer { visibility: hidden; }
+        [data-testid="stToolbar"] { visibility: hidden; }
+        [data-testid="stToolbar"] [data-testid="stExpandSidebarButton"] {
+            visibility: visible;
+        }
 
         /* ---- Scrollbar ---- */
         ::-webkit-scrollbar { width: 8px; height: 8px; }
@@ -156,7 +198,7 @@ def inject_styles() -> None:
             width: 64px;
             height: 3px;
             border-radius: 2px;
-            background: linear-gradient(90deg, var(--brand-400), var(--brand-600));
+            background: linear-gradient(90deg, var(--brand-500), var(--accent-500));
         }
 
         .app-badge {
@@ -164,22 +206,22 @@ def inject_styles() -> None:
             align-items: center;
             gap: 0.4rem;
             padding: 0.35rem 0.85rem;
-            background: linear-gradient(135deg, var(--brand-50), var(--brand-100));
-            border: 1px solid var(--brand-200);
+            background: linear-gradient(135deg, var(--brand-100), var(--accent-300));
+            border: 1px solid var(--brand-300);
             border-radius: 999px;
             font-size: 0.75rem;
             font-weight: 600;
             letter-spacing: 0.02em;
-            color: var(--brand-700);
+            color: var(--brand-800);
             margin-bottom: 1rem;
             text-transform: uppercase;
         }
 
         @media (prefers-color-scheme: dark) {
             .app-badge {
-                background: rgba(37, 99, 235, 0.15);
-                border-color: rgba(59, 130, 246, 0.3);
-                color: var(--brand-300);
+                background: rgba(226, 118, 80, 0.18);
+                border-color: rgba(226, 170, 82, 0.4);
+                color: var(--accent-300);
             }
         }
 
@@ -189,7 +231,7 @@ def inject_styles() -> None:
             letter-spacing: -0.035em;
             line-height: 1.1;
             margin: 0 0 0.75rem 0;
-            background: linear-gradient(135deg, var(--brand-600) 0%, var(--brand-800) 50%, #7c3aed 100%);
+            background: linear-gradient(135deg, var(--brand-500) 0%, var(--brand-700) 55%, var(--accent-600) 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
@@ -197,7 +239,7 @@ def inject_styles() -> None:
 
         @media (prefers-color-scheme: dark) {
             .app-title {
-                background: linear-gradient(135deg, var(--brand-300) 0%, var(--brand-500) 50%, #a78bfa 100%);
+                background: linear-gradient(135deg, var(--brand-800) 0%, var(--brand-500) 55%, var(--accent-500) 100%);
                 -webkit-background-clip: text;
                 -webkit-text-fill-color: transparent;
                 background-clip: text;
@@ -285,8 +327,8 @@ def inject_styles() -> None:
 
         @media (prefers-color-scheme: dark) {
             .stButton > button[kind="secondary"]:hover {
-                background: rgba(37, 99, 235, 0.12);
-                color: var(--brand-300);
+                background: rgba(198, 93, 58, 0.14);
+                color: var(--brand-800);
             }
         }
 
@@ -338,7 +380,7 @@ def inject_styles() -> None:
         }
 
         [data-testid="stChatMessageContent-User"] {
-            color: #ffffff;
+            color: var(--on-primary);
             font-weight: 500;
             font-size: 0.9375rem;
             line-height: 1.6;
@@ -349,7 +391,7 @@ def inject_styles() -> None:
         }
 
         [data-testid="stChatMessageAvatar-User"] {
-            background: linear-gradient(135deg, #64748b, #475569);
+            background: linear-gradient(135deg, var(--accent-500), var(--accent-600));
         }
 
         /* ---- Sources ---- */
@@ -400,7 +442,7 @@ def inject_styles() -> None:
 
         @media (prefers-color-scheme: dark) {
             .source-item:hover {
-                background: rgba(37, 99, 235, 0.1);
+                background: rgba(226, 118, 80, 0.12);
             }
         }
 
@@ -424,8 +466,8 @@ def inject_styles() -> None:
             font-style: italic;
             margin-top: 1rem;
             padding: 0.875rem 1.125rem;
-            background: linear-gradient(135deg, rgba(245, 158, 11, 0.08), rgba(245, 158, 11, 0.04));
-            border: 1px solid rgba(245, 158, 11, 0.2);
+            background: linear-gradient(135deg, rgba(217, 154, 61, 0.12), rgba(217, 154, 61, 0.05));
+            border: 1px solid rgba(217, 154, 61, 0.35);
             border-radius: var(--radius-md);
             display: flex;
             align-items: flex-start;
@@ -442,7 +484,7 @@ def inject_styles() -> None:
             height: 18px;
             border-radius: 50%;
             background: var(--warning);
-            color: #fff;
+            color: var(--on-primary);
             font-size: 0.6875rem;
             font-weight: 700;
             flex-shrink: 0;
@@ -468,7 +510,7 @@ def inject_styles() -> None:
             left: 0;
             right: 0;
             height: 4px;
-            background: linear-gradient(90deg, var(--brand-400), var(--brand-600), #7c3aed);
+            background: linear-gradient(90deg, var(--brand-500), var(--accent-500), var(--brand-600));
         }
 
         .plan-header {
@@ -550,8 +592,8 @@ def inject_styles() -> None:
         }
 
         .schedule-table thead th {
-            background: linear-gradient(135deg, var(--brand-600), var(--brand-700));
-            color: #ffffff;
+            background: linear-gradient(135deg, var(--brand-500), var(--brand-600));
+            color: var(--on-primary);
             font-weight: 600;
             font-size: 0.6875rem;
             text-transform: uppercase;
@@ -587,7 +629,7 @@ def inject_styles() -> None:
 
         @media (prefers-color-scheme: dark) {
             .schedule-table tbody tr:hover {
-                background: rgba(37, 99, 235, 0.08);
+                background: rgba(226, 118, 80, 0.1);
             }
         }
 
@@ -651,10 +693,10 @@ def inject_styles() -> None:
 
         /* ---- Sidebar Buttons ---- */
         [data-testid="stSidebar"] .stButton > button[kind="primary"] {
-            background: linear-gradient(135deg, var(--brand-600), var(--brand-700));
+            background: linear-gradient(135deg, var(--brand-500), var(--brand-600));
             border: none;
             border-radius: var(--radius-md);
-            color: #ffffff;
+            color: var(--on-primary);
             font-weight: 600;
             font-size: 0.875rem;
             padding: 0.75rem 1rem;
@@ -709,7 +751,7 @@ def inject_styles() -> None:
             height: 6px;
             border-radius: 50%;
             background: var(--brand-500);
-            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+            box-shadow: 0 0 0 3px rgba(198, 93, 58, 0.18);
         }
 
         .plan-summary-item {
@@ -1111,8 +1153,13 @@ def _record_answer(result: dict, answer: str, plan=None) -> None:
     }
     if not entry["sources"]:
         # A plan turn is not a knowledge-base answer, but it is still an answer,
-        # so it is not labelled as a refusal.
-        entry["unavailable"] = result.get("plan") is None
+        # so it is not labelled as a refusal. A request that is still collecting
+        # constraints has not failed either; only an answer that carried no
+        # evidence and was not a planning request is a refusal.
+        entry["unavailable"] = (
+            result.get("plan") is None
+            and result.get("intent") not in {"PLAN_CREATE", "PLAN_MODIFY"}
+        )
     if plan is not None:
         # Snapshot only the constructor fields of StudyPlan. `to_dict()` also
         # returns derived values (total_sessions/total_hours) that are not

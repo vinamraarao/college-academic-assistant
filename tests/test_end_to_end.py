@@ -127,6 +127,86 @@ def test_study_plan_generated(graph):
     assert plan.total_sessions > 0
 
 
+# --- Reported regressions: study-table routing ------------------------------
+@pytest.mark.parametrize(
+    "question",
+    [
+        "Can you make study table for 4th semester subject?",
+        "Make a study table for 4th semester subjects.",
+        "Create a study plan for 4th semester.",
+        "Give me a timetable for my 4th semester subjects.",
+        "I have 10 days to prepare for my subjects.",
+    ],
+)
+def test_study_request_reaches_the_planner(graph, question):
+    """These were answered with the RAG refusal 'I could not find this'."""
+    result = run(graph, question)
+    assert result.get("intent") in {"PLAN_CREATE", "PLAN_MODIFY"}, (
+        f"study request was routed to {result.get('intent')!r}"
+    )
+    assert "could not find this information" not in result.get("answer", "").lower()
+
+
+def test_semester_study_table_uses_syllabus_subjects(graph):
+    """Subjects come from the syllabus, and the arithmetic stays in Python."""
+    result = run(
+        graph,
+        "Make a study table for 4th semester subjects. "
+        "I have 10 days and 3 hours a day.",
+    )
+    plan = result.get("plan")
+    assert plan is not None, "no plan was produced for a study-table request"
+    assert plan.subjects, "the plan has no subjects"
+    # No invented or prompt-derived subject names.
+    assert not any(
+        subject.strip("?.!").lower() in {"", "semester", "subjects", "my subjects"}
+        for subject in plan.subjects
+    )
+    # Python computed the schedule: every session fits inside the stated hours.
+    assert plan.total_sessions > 0
+    for day in plan.schedule:
+        assert day["hours"] <= 3.0
+    assert len(plan.schedule) <= 10, "no study day may fall outside the countdown"
+
+
+def test_study_request_without_constraints_asks_instead_of_inventing(graph):
+    result = run(graph, "Can you make study table for 4th semester subject?")
+    answer = (result.get("answer") or "").lower()
+    assert "still need" in answer
+    assert "number of days" in answer
+    assert result.get("plan") is None
+
+
+# --- Reported regressions: syllabus answer ----------------------------------
+def test_syllabus_question_does_not_lose_semesters(graph):
+    """The reported answer mislabelled semesters and dropped most of them."""
+    result = run(graph, "What are the CSE subjects in the current syllabus?")
+    answer = result.get("answer") or ""
+    assert result.get("grounded") is True
+    for semester in range(1, 9):
+        assert f"Semester {semester}" in answer, f"Semester {semester} missing"
+
+
+def test_syllabus_question_cites_only_the_syllabus(graph):
+    """An internship document was being cited for a syllabus question."""
+    result = run(graph, "What are the CSE subjects in the current syllabus?")
+    sources = {s["source"] for s in result.get("sources", [])}
+    assert sources, "a grounded answer must carry sources"
+    assert all("Internship" not in s for s in sources), (
+        f"unrelated document cited for a syllabus question: {sources}"
+    )
+    assert any("Syllabus" in s for s in sources), (
+        f"the syllabus itself was not cited: {sources}"
+    )
+
+
+def test_syllabus_citations_use_real_pages(graph):
+    result = run(graph, "What are the CSE subjects in the current syllabus?")
+    for source in result.get("sources", []):
+        assert isinstance(source.get("page"), int)
+        assert source["page"] >= 1
+
+
 # --- 10. Study plan modification ------------------------------------------
 def test_study_plan_modification_keeps_previous_state(graph):
     created = run(

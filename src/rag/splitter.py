@@ -48,7 +48,7 @@ def split_pages(
         text = page.get("page_content", "").strip()
         if not text:
             continue
-        for chunk in splitter.split_text(text):
+        for position, chunk in enumerate(splitter.split_text(text)):
             cleaned = chunk.strip()
             if len(cleaned) < 20:
                 continue  # fragments too small to carry meaning hurt retrieval
@@ -58,6 +58,9 @@ def split_pages(
                     metadata={
                         "source": page.get("source", "unknown"),
                         "page": page.get("page", 0),
+                        # Reading order, so a page can be reassembled at
+                        # retrieval time from the individual chunks.
+                        "chunk_index": position,
                     },
                 )
             )

@@ -31,8 +31,22 @@ _EXAM_DATE = re.compile(
 _DAYS_COUNT = re.compile(
     r"(\d+)\s*(?:days?|weeks?)\b(?!\s*(ago|later|hour|hr|min))", re.I
 )
-_HOURS = re.compile(r"(\d+(?:\.\d+)?)\s*(?:hours?|hrs?)\b", re.I)
+_HOURS = re.compile(
+    r"(\d+(?:\.\d+)?)\s*(?:hours?|hrs?)\b(?!\s*exam)", re.I
+)
+# "and 3 hours a day" / "2 hrs daily" states the unit after the number.
+_HOURS_PER_DAY = re.compile(
+    r"(?:and\s+)?(\d+(?:\.\d+)?)\s*(?:hours?|hrs?)\b(?:\s*(?:a|per)\s*)?(?:day|daily)",
+    re.I,
+)
 _SESSION = re.compile(r"(\d+)\s*(?:minutes?|mins?)\b", re.I)
+# Interrogative openings. A question asks about something; it never enumerates
+# subjects, and treating one as a subject list produced nonsense schedules.
+_QUESTION = re.compile(
+    r"^\s*(?:what|which|who|whom|whose|when|where|why|how|is|are|was|were|"
+    r"do|does|did|can|could|should|will|would|tell|explain|list)\b",
+    re.I,
+)
 
 _MONTHS = {m: i + 1 for i, m in enumerate(
     ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"]
@@ -46,7 +60,34 @@ _STOP = {
     "only", "please", "make", "create", "plan", "schedule", "prepare", "preparing",
     "cannot", "cant", "not", "available", "available", "study", "it", "to", "a",
     "an", "each", "every", "total", "study", "exam", "each", "minutes", "minute",
+    # Study-planning vocabulary. Without these, "4th semester", "my subjects"
+    # and "to study my semester subjects" were accepted as subject names.
+    "semester", "sem", "semesters", "table", "timetable", "prepared", "give",
+    "need", "want", "help", "time", "times", "more", "less", "any", "all",
+    "what", "which", "how", "many", "when", "where", "who", "why", "if",
+    "there", "then", "than", "from", "by", "as", "at", "or", "but", "so",
+    "week", "weeks", "month", "months", "syllabus", "current", "of", "get",
+    "got", "us", "we", "our", "you", "your", "they", "them", "their",
 }
+# Ordinals and bare numbers carry no subject name ("4th semester" -> "4th").
+_ORDINAL = re.compile(r"^\d+(?:st|nd|rd|th)?$", re.I)
+# Any punctuation at all means this was a sentence fragment, not a subject.
+_PUNCT_ONLY = re.compile(r"^[^\w&]+$")
+
+
+def _is_junk_subject(name: str) -> bool:
+    """True when the candidate is prompt wording rather than a subject name.
+
+    The rule is that a real subject keeps at least one word that carries
+    meaning on its own; "my subjects", "4th semester" and "to study my
+    semester subjects" do not.
+    """
+    if not name or _PUNCT_ONLY.match(name):
+        return True
+    return not any(
+        word.lower() not in _STOP and not _ORDINAL.match(word)
+        for word in re.findall(r"[\w&+.]+", name)
+    )
 
 
 def parse_exam_date(text: str) -> date | None:
@@ -83,7 +124,9 @@ def parse_days(text: str) -> int | None:
 
 def parse_hours_per_day(text: str) -> float | None:
     """Hours the student can study per day."""
-    match = _HOURS.search(text or "")
+    # Prefer the phrasing that names the period, so "15 days, 2 hours daily"
+    # reads as two hours a day rather than two hours total.
+    match = _HOURS_PER_DAY.search(text or "") or _HOURS.search(text or "")
     if not match:
         return None
     value = float(match.group(1))
@@ -108,6 +151,10 @@ def parse_subjects(text: str) -> list[str]:
         return []
     # A sentence that only adjusts an existing plan is not a subject list.
     if _MODIFY_ONLY.search(text):
+        return []
+    # A question asks about something; it never enumerates subjects. Without
+    # this, "What are the internship requirements?" yielded itself as a subject.
+    if _QUESTION.search(text):
         return []
 
     # Prefer the segment that follows an explicit subject cue:
@@ -146,7 +193,7 @@ def parse_subjects(text: str) -> list[str]:
         # Allow slightly longer names for multi-word subjects like "Computer Networks"
         if not name or len(name) > 50 or len(name.split()) > 8:
             continue
-        if name.lower() in _STOP:
+        if _is_junk_subject(name):
             continue
         if name.lower() not in [s.lower() for s in subjects]:
             subjects.append(name)
