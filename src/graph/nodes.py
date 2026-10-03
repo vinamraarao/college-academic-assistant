@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import logging
 import re
+from functools import lru_cache
 
 from src.graph.planner import (
     StudyPlan,
@@ -113,6 +114,28 @@ _DANGLING_REFERENCE = re.compile(
 )
 
 
+@lru_cache(maxsize=64)
+def _rewrite_query_cached(history_tuple: tuple[tuple[str, str], ...], question: str) -> str:
+    """Cached version of query rewrite - takes hashable history tuple."""
+    history = [{"role": r, "content": c} for r, c in history_tuple]
+
+    stripped = question.strip()
+    has_reference = bool(_DANGLING_REFERENCE.search(stripped))
+    is_elliptical = len(stripped.split()) <= 4
+    if not (has_reference or is_elliptical):
+        return question
+
+    try:
+        messages = REWRITE_PROMPT.format_messages(
+            history=history_to_text(history), question=question
+        )
+        rewritten = clean_llm_text(invoke(get_llm(), messages))
+        return rewritten if len(rewritten) > 5 else question
+    except Exception as exc:
+        logger.warning("Query rewrite failed, using raw question: %s", exc)
+        return question
+
+
 def _rewrite_query(state: AssistantState) -> str:
     """Expand a follow-up into a standalone question when history exists.
 
@@ -126,24 +149,10 @@ def _rewrite_query(state: AssistantState) -> str:
     if not history:
         return question
 
-    stripped = question.strip()
-    has_reference = bool(_DANGLING_REFERENCE.search(stripped))
-    # Very short questions ("What about it?", "And the documents?") are almost
-    # always elliptical even without a pronoun.
-    is_elliptical = len(stripped.split()) <= 4
-    if not (has_reference or is_elliptical):
-        return question
-
-    try:
-        messages = REWRITE_PROMPT.format_messages(
-            history=history_to_text(history), question=question
-        )
-        rewritten = clean_llm_text(invoke(get_llm(), messages))
-        # Ignore a rewrite that dropped the original meaning entirely.
-        return rewritten if len(rewritten) > 5 else question
-    except Exception as exc:
-        logger.warning("Query rewrite failed, using raw question: %s", exc)
-        return question
+    # Convert history to hashable tuple for caching
+    history_tuple = tuple((m.get("role", "user"), str(m.get("content", "")).strip())
+                          for m in history if m.get("content"))
+    return _rewrite_query_cached(history_tuple, question)
 
 
 def retrieve(state: AssistantState) -> dict:

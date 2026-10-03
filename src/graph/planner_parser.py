@@ -29,7 +29,7 @@ _EXAM_DATE = re.compile(
     re.I,
 )
 _DAYS_COUNT = re.compile(
-    r"(\d+)\s*days?\b(?!\s*(ago|later|hour|hr|min))", re.I
+    r"(\d+)\s*(?:days?|weeks?)\b(?!\s*(ago|later|hour|hr|min))", re.I
 )
 _HOURS = re.compile(r"(\d+(?:\.\d+)?)\s*(?:hours?|hrs?)\b", re.I)
 _SESSION = re.compile(r"(\d+)\s*(?:minutes?|mins?)\b", re.I)
@@ -138,11 +138,13 @@ def parse_subjects(text: str) -> list[str]:
         name = re.split(r"\b(?:in|after|starting|because)\b", name, flags=re.I)[0]
         name = _HOURS.sub("", name)
         name = _DAYS_COUNT.sub("", name)
+        name = re.sub(r"\bfor\b", "", name, flags=re.I)
         name = _SESSION.sub("", name)
         name = re.sub(r"\bI\s+(?:can|could|will|have|am)\b.*$", "", name, flags=re.I)
         name = re.sub(r"\bexam(?:s)?\b.*$", "", name, flags=re.I)
         name = name.strip(" .,\n\t-")
-        if not name or len(name) > 40 or len(name.split()) > 6:
+        # Allow slightly longer names for multi-word subjects like "Computer Networks"
+        if not name or len(name) > 50 or len(name.split()) > 8:
             continue
         if name.lower() in _STOP:
             continue

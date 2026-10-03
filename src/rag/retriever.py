@@ -71,7 +71,7 @@ class CollegeRetriever:
         # Both gates must pass: the absolute floor rejects noise-only matches,
         # the relative floor drops weak neighbours of a good hit.
         if best < self.min_score:
-            logger.info(
+            logger.debug(
                 "No chunk cleared the absolute floor (best=%.3f < %.3f)",
                 best, self.min_score,
             )
@@ -79,7 +79,7 @@ class CollegeRetriever:
 
         floor = max(self.min_score, best * self.score_threshold)
         kept = [(doc, score) for doc, score in hits if score >= floor]
-        logger.info(
+        logger.debug(
             "Retrieved %d/%d chunks (best=%.3f floor=%.3f)", len(kept), len(hits), best, floor
         )
         return kept

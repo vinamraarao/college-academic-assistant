@@ -67,11 +67,6 @@ def clean_llm_text(text: str) -> str:
     return cleaned.strip()
 
 
-def format_citation(source: str, page: object) -> str:
-    """'Academic_Regulations.pdf, page 12' — page omitted when unknown."""
-    if page in (None, 0, "", "0"):
-        return source
-    return f"{source}, page {page}"
 
 
 def truncate(text: str, limit: int = 300) -> str:
